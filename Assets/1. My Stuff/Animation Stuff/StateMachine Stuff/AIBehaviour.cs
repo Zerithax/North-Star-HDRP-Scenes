@@ -13,10 +13,8 @@ public class AIBehaviour : MonoBehaviour
     public static readonly int hashStunned = Animator.StringToHash("Stunned");
     public static readonly int hashGettingUp = Animator.StringToHash("GettingUp");
 
-    private AIControllerM aiController;
-    public AIControllerM AIController { get { return aiController; } }
-
-    //METHOD-VARIABLES
+    public Animator animator;
+    public Rigidbody rb;
 
     //Movement Variables
     public LayerMask collisionMask;
@@ -31,7 +29,7 @@ public class AIBehaviour : MonoBehaviour
     public float rotateToPoint;
     public float stunTime;
 
-    //Edge Variables
+    //Edge Variable
     public float edgeCheckDistance;
 
     //Respawn Variables
@@ -41,9 +39,6 @@ public class AIBehaviour : MonoBehaviour
     //Debug Variables
     public bool logDot = false;
     public bool debugLines = false;
-
-    //Bools and vars to trigger RigidBody manipulation in FixedUpdate()
-    [SerializeField] private Rigidbody rb;
 
     private Vector3 slopeDirection;
     [SerializeField] private float turnSpeed;
@@ -61,19 +56,12 @@ public class AIBehaviour : MonoBehaviour
     //MOVEMENT
     private void FixedUpdate()
     {
-        float steepness = aiController.Animator.GetFloat("Steepness");
-        if (steepness > slopeThreshold && aiController.Animator.GetBool("Edge") == false)
+        if (animator.GetFloat("Steepness") > slopeThreshold && animator.GetBool("Edge") == false)
         {
-            //gameObject.transform.position += slopeDirection * moveSpeed / 1000;
-            //rb.AddForce(slopeDirection * (moveSpeed * 1 - steepness), ForceMode.);
-
-            //rb.MovePosition(slopeDirection * (moveSpeed * 1 - steepness) / 1000);
             rb.MovePosition(transform.position + (slopeDirection * moveSpeed * Time.deltaTime) / 100);
-
-            //Debug.Log("Move position to " + (transform.position + (slopeDirection * moveSpeed * Time.deltaTime) / 100));
         }
 
-        var temp = aiController.Animator.GetCurrentAnimatorStateInfo(0);
+        var temp = animator.GetCurrentAnimatorStateInfo(0);
 
         if (!slopeDirection.Equals(Vector3.zero) && Vector3.Dot(transform.forward, slopeDirection) < 0.99)
         {
@@ -84,38 +72,28 @@ public class AIBehaviour : MonoBehaviour
                 LookUpSlope(slopeDirection, turnSpeed);
             }
         }
-
-        /*
-        if (!slopeDirection.Equals(new Vector3(0, 0, 0)) && Vector3.Dot(transform.forward, slopeDirection) < 0.98 && aiController.Animator.GetBool("Ground") == true)
-        {
-            Debug.Log("Looking up slope!");
-            if (aiController.Animator.GetFloat("Rotation") > rotateToPoint) LookUpSlope(slopeDirection, turnSpeed);
-        }
-        */
     }
 
 
     //METHODS
     private void OnEnable()
     {
-        aiController = gameObject.GetComponent<AIControllerM>();
-        aiController.Animator.Play(hashIdle, -1, 1);
-        SceneLinkedSMB<AIBehaviour>.Initialise(aiController.Animator, this);
+        animator.Play(hashIdle, -1, 1);
+        SceneLinkedSMB<AIBehaviour>.Initialise(animator, this);
     }
 
     public IEnumerator StunnedTime()
     {
         yield return new WaitForSeconds(stunTime);
-        aiController.Animator.SetBool("Stunned", false);
+        animator.SetBool("Stunned", false);
     }
 
     public Vector3? GetGroundNormal(float distance)
     {
-        RaycastHit hit;
         Ray ray = new Ray(transform.position, Vector3.down);
         if (debugLines) Debug.DrawRay(transform.position, Vector3.down * distance, Color.red);
 
-        if (Physics.Raycast(ray, out hit, distance, collisionMask))
+        if (Physics.Raycast(ray, out RaycastHit hit, distance, collisionMask))
         {
             return hit.normal;
         }
@@ -127,7 +105,7 @@ public class AIBehaviour : MonoBehaviour
 
     public void FixRotation(float speed, Vector3 slopeUp)
     {
-        if (aiController.Animator.GetFloat("Rotation") < rotateToPoint)
+        if (animator.GetFloat("Rotation") < rotateToPoint)
         {
             //Start rotating back into place. This will automatically stop when I approach the rotateToPoint.
             Quaternion newRotation = Quaternion.FromToRotation(transform.up, slopeUp) * transform.rotation;
@@ -146,7 +124,7 @@ public class AIBehaviour : MonoBehaviour
 
         //Get the dot product of the up direction of the slope and the current up direction
         float rotation = Vector3.Dot(groundSlope, currentUp);
-        aiController.Animator.SetFloat("Rotation", rotation);
+        animator.SetFloat("Rotation", rotation);
 
         if (logDot) Debug.Log("Dot between self and ground is " + rotation);
     }
@@ -156,7 +134,7 @@ public class AIBehaviour : MonoBehaviour
         //Get the direction I should look (pointing up the slope)
         Vector3 cross = Vector3.Cross(Vector3.up, slopeNormal);
         slopeDirection = Vector3.Cross(-cross, slopeNormal).normalized;
-        aiController.Animator.SetFloat("Steepness", Mathf.Abs(cross.x) + Mathf.Abs(cross.y) + Mathf.Abs(cross.z));
+        animator.SetFloat("Steepness", Mathf.Abs(cross.x) + Mathf.Abs(cross.y) + Mathf.Abs(cross.z));
 
         if (debugLines)
         {
@@ -167,23 +145,11 @@ public class AIBehaviour : MonoBehaviour
 
     public void LookUpSlope(Vector3 slopeUpDirection, float turnForce)
     {
-        /*
-        Vector3 x = Vector3.Cross(transform.forward.normalized, slopeUpDirection.normalized);
-        float theta = Mathf.Asin(x.magnitude);
-        Vector3 w = x.normalized * theta / Time.fixedDeltaTime;
-
-        Quaternion q = transform.rotation * rb.inertiaTensorRotation;
-        var T = q * Vector3.Scale(rb.inertiaTensor, (Quaternion.Inverse(q) * w));
-
-        rb.AddRelativeTorque(T * turnForce, ForceMode.Acceleration);
-        */
-
         rb.MoveRotation(Quaternion.LookRotation(slopeDirection, transform.up));
     }
 
     public bool IsApproachingAnEdge(float distance, float edgeDistance, LayerMask mask)
     {
-        //RaycastHit hit;
         Vector3 edgeCheck = transform.position + (transform.forward * edgeDistance);
         Ray ray = new Ray(edgeCheck, Vector3.down);
         if (debugLines) Debug.DrawRay(edgeCheck, Vector3.down * (groundCheckDistance * 2), Color.yellow);

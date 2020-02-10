@@ -11,6 +11,9 @@ public class AIGettingUp : SceneLinkedSMB<AIBehaviour>
     {
         base.OnSLStateEnter(animator, stateInfo, layerIndex);
 
+        //m_MonoBehaviour.rb.detectCollisions = true;
+        //m_MonoBehaviour.rb.useGravity = true;
+
         groundNormal = m_MonoBehaviour.GetGroundNormal(m_MonoBehaviour.groundCheckDistance);
         if (groundNormal != null)
         {
@@ -22,6 +25,9 @@ public class AIGettingUp : SceneLinkedSMB<AIBehaviour>
     {
         base.OnSLStateNoTransitionUpdate(animator, stateInfo, layerIndex);
 
+        //Put the rigidbody to sleep so it doesn't mess with our AI when it's on my hands
+        //m_MonoBehaviour.rb.Sleep();
+
         if (onGround)
         {
             //Get back up
@@ -30,7 +36,7 @@ public class AIGettingUp : SceneLinkedSMB<AIBehaviour>
         }
         else
         {
-            m_MonoBehaviour.AIController.Animator.SetBool("Ground", false);
+            m_MonoBehaviour.animator.SetBool("Ground", false);
         }
     }
 }
