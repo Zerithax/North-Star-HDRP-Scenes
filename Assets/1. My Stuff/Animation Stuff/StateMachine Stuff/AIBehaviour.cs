@@ -90,10 +90,19 @@ public class AIBehaviour : MonoBehaviour
 
     public Vector3? GetGroundNormal(float distance)
     {
-        Ray ray = new Ray(transform.position, Vector3.down);
-        if (debugLines) Debug.DrawRay(transform.position, Vector3.down * distance, Color.red);
+        //Create a sphereRadius using half of the current X scale (it's a 1:1:1 cube, so this is fine!)
+        float sphereRadius = transform.localScale.x / 2;
 
-        if (Physics.Raycast(ray, out RaycastHit hit, distance, collisionMask))
+        Ray ray = new Ray(new Vector3(transform.position.x, transform.position.y + groundCheckDistance, transform.position.z), Vector3.down);
+        if (debugLines)
+        {
+            Debug.DrawRay(new Vector3(transform.position.x - sphereRadius, transform.position.y, transform.position.z), Vector3.down * distance, Color.red);
+            Debug.DrawRay(new Vector3(transform.position.x + sphereRadius, transform.position.y, transform.position.z), Vector3.down * distance, Color.red);
+            Debug.DrawRay(new Vector3(transform.position.x, transform.position.y, transform.position.z - sphereRadius), Vector3.down * distance, Color.red);
+            Debug.DrawRay(new Vector3(transform.position.x, transform.position.y, transform.position.z + sphereRadius), Vector3.down * distance, Color.red);
+        }
+
+        if (Physics.SphereCast(ray, sphereRadius, out RaycastHit hit, distance, collisionMask))
         {
             return hit.normal;
         }
@@ -108,7 +117,7 @@ public class AIBehaviour : MonoBehaviour
         if (animator.GetFloat("Rotation") < rotateToPoint)
         {
             //Start rotating back into place. This will automatically stop when I approach the rotateToPoint.
-            Quaternion newRotation = Quaternion.FromToRotation(transform.up, slopeUp) * transform.rotation;
+            Quaternion newRotation = Quaternion.FromToRotation(transform.up, Vector3.up) * transform.rotation;
             transform.Translate(new Vector3(0, getupHeight, 0) * Time.deltaTime, Space.World);
             transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * speed);
 
@@ -150,11 +159,22 @@ public class AIBehaviour : MonoBehaviour
 
     public bool IsApproachingAnEdge(float distance, float edgeDistance, LayerMask mask)
     {
-        Vector3 edgeCheck = transform.position + (transform.forward * edgeDistance);
-        Ray ray = new Ray(edgeCheck, Vector3.down);
-        if (debugLines) Debug.DrawRay(edgeCheck, Vector3.down * (groundCheckDistance * 2), Color.yellow);
+        //Using transform.scale.x instead of edgeDistance to try and get the size of the cube as a distance in front of the cube
+        Vector3 edgeCheck = transform.position + (transform.forward * (transform.localScale.x + transform.localScale.x / 4));
 
-        return !Physics.Raycast(ray, distance, mask);
+        //Create a sphereRadius using half of the current X scale (it's a 1:1:1 cube, so this is fine!)
+        float sphereRadius = transform.localScale.x / 2;
+
+        Ray ray = new Ray(edgeCheck, Vector3.down);
+        if (debugLines)
+        {
+            Debug.DrawRay(new Vector3(edgeCheck.x - sphereRadius, edgeCheck.y, edgeCheck.z), Vector3.down * (groundCheckDistance), Color.yellow);
+            Debug.DrawRay(new Vector3(edgeCheck.x + sphereRadius, edgeCheck.y, edgeCheck.z), Vector3.down * (groundCheckDistance), Color.yellow);
+            Debug.DrawRay(new Vector3(edgeCheck.x, edgeCheck.y, edgeCheck.z - sphereRadius), Vector3.down * (groundCheckDistance), Color.yellow);
+            Debug.DrawRay(new Vector3(edgeCheck.x, edgeCheck.y, edgeCheck.z + sphereRadius), Vector3.down * (groundCheckDistance), Color.yellow);
+        }
+
+        return !Physics.SphereCast(ray, sphereRadius, distance, mask);
     }
 
     private void Respawn()

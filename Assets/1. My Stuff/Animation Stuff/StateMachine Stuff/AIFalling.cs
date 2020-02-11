@@ -13,8 +13,8 @@ public class AIFalling : SceneLinkedSMB<AIBehaviour>
     {
         base.OnSLStateEnter(animator, stateInfo, layerIndex);
 
-        m_MonoBehaviour.rb.detectCollisions = true;
-        m_MonoBehaviour.rb.useGravity = true;
+        //m_MonoBehaviour.rb.detectCollisions = true;
+        //m_MonoBehaviour.rb.useGravity = true;
         
         initialTime = Time.time;
     }

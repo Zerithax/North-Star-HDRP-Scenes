@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class AIController : MonoBehaviour
 {
+    public Transform deathPoint;
+    public Transform respawnPoint;
+
     [SerializeField]
     private LayerMask collisionMask;
     [SerializeField]
@@ -18,6 +21,8 @@ public class AIController : MonoBehaviour
     private float getupSpeed = 1f;
     [SerializeField]
     private float getupDelay;
+
+
     private bool hasFallenOver = false;
     private bool onGround = false;
     private Vector3 slopeUp;
@@ -25,8 +30,6 @@ public class AIController : MonoBehaviour
     [SerializeField]
     private bool logDot = false;
 
-    [SerializeField]
-    private string currentState = "";
 
     void Start()
     {
@@ -35,6 +38,8 @@ public class AIController : MonoBehaviour
 
     void Update()
     {
+         if (transform.position.y < deathPoint.position.y) transform.position = respawnPoint.position;
+
         //Raycast to see if I'm on ground. If true, get ground's normal.
         RaycastHit hit;
         Ray ray = new Ray(transform.position, Vector3.down);
@@ -42,9 +47,6 @@ public class AIController : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, groundCheckDistance, collisionMask))
         {
-            //Set 'standing' state
-            currentState = "Standing on ground";
-
             onGround = true;
             //surfaceNormal = hit.normal;
             slopeUp = hit.normal;
@@ -52,14 +54,12 @@ public class AIController : MonoBehaviour
         }
         else
         {
-            //Set 'falling' state
-            currentState = "Falling/tumbling";
-
             onGround = false;
         }
 
         //onGround state check
-        if (onGround == true)
+        //if (onGround)
+        if (true)
         {
             //Set current up direction to check against
             Vector3 currentUp = transform.up;
@@ -70,34 +70,27 @@ public class AIController : MonoBehaviour
             if (logDot) Debug.Log("Dot between current up of " + currentUp + " and slope of " + slopeUp + " is " + dot);
 
             //If that dot product is less than 0.4 and I haven't already fallen over, set hasFallenOver = true
-            if (dot < 0.4 && hasFallenOver == false)
+            if (dot < 0.4 && !hasFallenOver)
             {
-                //Set 'fallen over' state
-                currentState = "Fallen over";
-
-                StartCoroutine(setFallenOver());
+                //StartCoroutine(setFallenOver());
+                hasFallenOver = true;
             }
             //Now that hasFallenOver = true, fix rotation until dot product is greater than 0.9 (mostly upright)
-            else if (dot < 0.9 && hasFallenOver == true)
+            else if (dot < 0.9 && hasFallenOver)
             {
-                //Set 'getting up' state
-                currentState = "Getting up...";
-
-                Quaternion q = Quaternion.FromToRotation(currentUp, slopeUp) * transform.rotation;
-                transform.Translate(new Vector3(0, 0.15f, 0) * Time.deltaTime, Space.World);
+                Quaternion q = Quaternion.FromToRotation(currentUp, Vector3.up) * transform.rotation;
+                transform.Translate(new Vector3(0, 0.1f, 0) * Time.deltaTime, Space.World);
                 transform.rotation = Quaternion.Slerp(transform.rotation, q, Time.deltaTime * getupSpeed);
             }
             //I'm upright now, so hasFallenOver = false
             else
             {
-                //Set 'standing' state
-                currentState = "Standing on ground";
-
                 hasFallenOver = false;
             }
 
             //If I'm not tipped over and I'm on ground
-            if (hasFallenOver == false)
+            //if (!hasFallenOver)
+            if (onGround)
             {
                 //The direction the player will move (running up the slope)
                 Vector3 cross = Vector3.Cross(Vector3.up, slopeUp);
@@ -107,9 +100,6 @@ public class AIController : MonoBehaviour
                 //If the slope is greater than a threshold, start running up the slope
                 if (Mathf.Abs(cross.x) + Mathf.Abs(cross.y) + Mathf.Abs(cross.z) > 0.2)
                 {
-                    //Set 'walking' state (walking is a child of standing/on ground)
-                    currentState = "Walking";
-
                     gameObject.transform.position += (slope / 100 * (moveSpeed * 0.1f));
                 }
             }
@@ -121,7 +111,7 @@ public class AIController : MonoBehaviour
     {
         Debug.Log("I've fallen over! Starting getupDelay...");
         yield return new WaitForSeconds(getupDelay);
-        if (onGround == true)
+        if (onGround)
         {
             hasFallenOver = true;
         }
